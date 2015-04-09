@@ -1,0 +1,113 @@
+---
+title: "Modelling the absorption process"
+author: "Marc Lavielle </br> January 28, 2015 </br> &nbsp; <hr>"
+
+output: 
+  html_document:
+    toc: true
+---
+---
+<link href="../markdown3.css" rel="stylesheet"></link>  
+
+</br>
+
+### Introduction
+
+Let $R_a(t)$ be the rate of absorption at time $t$, i.e. the rate at which the depot compartment empties and the central compartment fills up.  Assuming no elimination, the system reduces to
+\[
+\begin{aligned}
+\dot{A_d}(t) & = -R_a(t)  \\\
+\dot{A_c}(t) & = R_a(t) 
+\end{aligned}
+\]
+where $A_d(t)$ and $A_c(t)$ are, respectively, the amounts in the depot and central compartments.
+
+If the amounts are expressed in grams and the time in hours, then, the rate of absorption is expressed in gram per hour (g/h).
+
+Let us see some examples of absorption processes.
+We will consider in these examples a single dose $D$ administered at time $t_D$. The initial conditions of the system are therefore
+\[
+\begin{aligned}
+A_d(t_D) & = D  \\\
+A_c(t_D) & = 0
+\end{aligned}
+\]
+Furthermore, $A_c(t)+A_d(t)=D$ for ant $t\geq t_D$ since there is no elimination here.
+
+We will use $D=1$ and $t_D=0$ for the numerical examples.
+
+</br>
+
+### First order absorption
+The rate $R_a(t)$ is proportional to the amount  $A_d(t)$:
+\[
+R_a(t) =  k_a \, A_d(t) 
+\]
+
+The coefficient of proportionality $k_a$ is called *absorption rate constant*.
+
+There exists an analytical solution for $A_d(t)$:
+$$A_d(t) = D e^{-k_a \, t}$$
+ 
+
+<iframe src="http://simulx.webpopix.org:8080/PKintro/absorption1" style="border: none; width: 800px; height: 300px"; scrolling=yes></iframe>
+
+### Zero order absorption
+The rate is a constant $R_0$:
+\[
+R_a(t) =  R_0 \, {\mathbf 1}_{A_d(t)>0} 
+\]
+Then, the duration of absorption is $Tk0 = 1/R_0$.
+
+There exists an analytical solution for $A_d(t)$:
+$$
+\begin{align}
+A_d(t) &= D (1 - R_0 t) & & \text{for } 0\leq t \leq Tk0 \\\
+&= 0 & & \text{for } t \geq 0
+\end{align}
+$$
+
+</br>
+
+
+<iframe src="http://simulx.webpopix.org:8080/PKintro/absorption2" style="border: none; width: 800px; height: 300px" ; scrolling=no></iframe>
+
+
+### alpha order absorption
+The rate is proportional to a power of $A_d$:
+\[
+R_a(t) =  r \, (A_d(t))^\alpha  \quad \quad (\alpha>0)
+\]
+First-order and zero-order absorption processes correspond, respectively, to $\alpha=1$ and $\alpha=0$.
+
+</br>
+
+When $0 <\alpha <1$, 
+$$
+\begin{align}
+A_d(t) &= (D^{1/a}-b\,t)^a & & \text{for } 0\leq t \leq {D^{1/a}}/{b} \\\
+&= 0 & & \text{for } t \geq {D^{1/a}}/{b}
+\end{align}
+$$
+where $a=1/(1-\alpha)$ and $b=(1-\alpha)r$.
+
+</br>
+
+When $\alpha >1$, 
+$$
+A_d(t) = D \left(1 - (1+b\, t)^a \right) 
+$$
+where $a=1/(1-\alpha)$ and $b=r(\alpha-1)D^{\alpha-1}$.
+
+
+<iframe src="http://simulx.webpopix.org:8080/PKintro/absorption3" style="border: none; width: 800px; height: 300px"; scrolling=no></iframe>
+
+### Saturated absorption
+The rate of absorption cannot exceed a given value $V_m$:
+\[
+R_a(t) =  \frac{V_m \, A_d(t)}{K_m + A_d(t)}
+\]
+
+<iframe src="http://simulx.webpopix.org:8080/PKintro/absorption4" style="border: none; width: 800px; height: 300px"; scrolling=no></iframe>
+
+

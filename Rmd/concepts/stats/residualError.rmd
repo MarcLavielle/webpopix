@@ -1,0 +1,167 @@
+---
+title: "Some residual error models"
+author: "Marc Lavielle </br> January 27, 2014 </br> &nbsp; <hr>"
+
+output: 
+  html_document:
+    toc: true
+---
+---
+<link href="../markdown3.css" rel="stylesheet"></link>  
+
+$$
+\newcommand{\esp}[1]{\mathbb{E}\left(#1\right)}
+\newcommand{\var}[1]{\mbox{Var}\left(#1\right)}
+$$
+
+
+### Introduction
+
+A model for continuous data for a single individual can be represented mathematically as follows:
+$$
+y_{j} = f(t_j) + e_j, \quad \quad  1\leq j \leq n,
+$$
+where
+
+* $(t_1,t_2,\ldots , t_n)$  is the vector of sampling times. 
+
+* $f$ is the *structural model*. It is a function of time: $f(t_j)$ is the value of $f$ evaluated at time $t_j$.
+
+*  $(e_1, e_2, \ldots, e_n)$  are called the *residual errors*.
+ It is common to assume  that the residual errors are normally distributed but we can also use any  centered probability distribution, i.e., such that $\esp{e_j} =0$.
+
+Then, $f(t_j)$ is the predicted value of $y_j$:
+
+$$ \tilde{y}_j = f(t_j) $$
+ 
+
+We usually state continuous data models in a slightly more flexible way:
+$$
+y_{j} = f(t_j) + g(t_j ;\xi)\varepsilon_j  , \quad \quad  1\leq j \leq n,
+$$
+where now
+
+* $g$  is called the *residual error model*. It depends on some parameters $\xi$.
+It may also be a function of the time $t$.
+
+* $(\varepsilon_1, \varepsilon_2, \ldots, \varepsilon_n)$  are the *standardized residual errors*.
+For identifiability reasons, we suppose that these come from a probability distribution which is centered and has
+unit variance: $\esp{\varepsilon_j} = 0$ and $\var{\varepsilon_j} =1$, such as the standard normal distribution ${\cal N}(0,1)$.
+
+
+The choice of a residual error model $g$ is very flexible and allows us to account for
+many different hypotheses we may have on the error's distribution. 
+
+</br>
+
+### Constant error model
+
+$g=a$. That is,  $y_j=f(t_j)+a\varepsilon_j$ and $\xi=a$.
+
+In the following example, 
+$$ f(t) = 25\left( e^{-0.6 t} - e^{-t}\right) $$
+
+You can select the standard deviation $a$  of the residual errors and
+the number $n$ of sample times.
+
+Then, you can plot
+
+* the observations $(y_j)$ versus the sampling times $(t_j)$,
+
+* the observations $(y_j)$ versus the predictions $(\tilde{y}_j)$, where $\tilde{y}_j = f(t_j)$,
+
+* the residual errors $(e_j)$ versus the sampling times $(t_j)$, where
+$e_j=y_j - \tilde{y}_j = a\varepsilon_j$,
+
+* the residual errors $(e_j)$ versus the predictions $(\tilde{y}_j)$.
+
+The median is obtained with $\varepsilon_j=0$ while the first and third quartiles are obtained, respectively, with $\varepsilon_j=-0.6745$ and $\varepsilon_j=0.6745$.
+
+</br>
+
+<iframe src="http://simulx.webpopix.org:8080/StatisticalModel/error1" style="border: none; width: 800px; height: 400px"; scrolling=no></iframe>
+
+</br>
+
+### Proportional error model
+$g=bf$. That is,  $y_j=f(t_j)+b f(t_j) \varepsilon_j$ and $\xi=b$.
+
+</br>
+
+<iframe src="http://simulx.webpopix.org:8080/StatisticalModel/error2" style="border: none; width: 800px; height: 400px"; scrolling=no></iframe>
+
+</br>
+
+### Combined error model
+$g=a+bf$. That is,  $y_j=f(t_j)+(a+b f(t_j)) \varepsilon_j$ and $\xi=(a,b)$.
+
+</br>
+
+<iframe src="http://simulx.webpopix.org:8080/StatisticalModel/error3" style="border: none; width: 800px; height: 400px"; scrolling=no></iframe>
+
+An alternative combined error model assumes that
+$$y_j=f(t_j)+ a \varepsilon_j^{(1)}+b f(t_j)) \varepsilon_j^{(2)}$$
+where $\varepsilon_j^{(1)}$ and $\varepsilon_j^{(2)}$ are independent.
+If $\varepsilon_j^{(1)}$ and $\varepsilon_j^{(2)}$ are normally distributed, then there exists a sequence of standard normal random variables $(\varepsilon_j)$ such that 
+$$y_j=f(t_j)+ \sqrt{a +b f(t_j)} \varepsilon_j$$
+Here, $g=\sqrt{a^2+b^2f^2}$ and $\xi=(a,b)$.
+
+</br>
+
+<iframe src="http://simulx.webpopix.org:8080/StatisticalModel/error4" style="border: none; width: 800px; height: 400px"; scrolling=no></iframe>
+
+**Remark:** In this example, these two combined error models are almost indistinguishable.
+</br>
+
+### Transforming the data
+
+The assumption that the distribution of any observation $y_{j}$ is symmetrical around its predicted value is a very strong one.
+If this assumption does not hold, we may want to transform the data to make it more symmetric around its (transformed) predicted value.
+ In other cases, constraints on the values that observations can take may also lead us to transform the data.
+
+Basic model  can be extended to include a transformation of the data:
+$$
+u(y_{j})=u(f(t_{j}))+ g(t_{j},\xi_i)\varepsilon_{j} ,
+$$
+where $u$ is a  monotonic transformation (a strictly increasing or decreasing function).
+As we can see, both the data $(y_{j})$ and the structural model $f$ are transformed by the function
+$u$ so that $f(t_{j})$ remains the prediction of $y_{j}$.
+
+Let us see now some  examples of basic transformations, assuming a constant error model (in the domain of the transform data), i.e.  $g=a$.
+
+* If $y$ takes nonnegative values, a log transformation can be used:
+$u(y) = \log(y)$.
+
+We can then write the model with one of two equivalent representations:
+$$
+\begin{aligned}
+\log(y_{j})&=\log(f(t_{j}))+ a\varepsilon_{j}  \\
+y_{j}&=f(t_{j})\, e^{ a\varepsilon_{j} }.
+\end{aligned}
+$$
+This model is sometimes called *exponential error model*. 
+We  remark that when $a$ is small,  the exponential error model is similar to the proportional error one since $e^{a\varepsilon_j} \approx 1 + a\varepsilon_j$.
+
+</br>
+
+<iframe src="http://simulx.webpopix.org:8080/StatisticalModel/error5" style="border: none; width: 800px; height: 400px"; scrolling=no></iframe>
+
+</br>
+
+* If $y$ takes its values between 0 and 100, a logit-like transformation can be used:
+$u(y) = \log(y/(100-y))$.
+
+We can then write the model with one of two equivalent representations:
+$$
+\begin{aligned}
+\log\left(\frac{y_{j}}{100-y_{j}}\right)&=\log\left(\frac{f(t_{j})}{100-f(t_{j})}\right)+ a\varepsilon_{j}  \\
+y_{j}&=\frac{ 100 f(t_{j})}{f(t_{j}) + (100-f(t_{j}))\, e^{ -a\varepsilon_{j}} }.
+\end{aligned}
+$$
+
+In the following example, 
+$$ f(t) = \frac{100}{1+e^{-(t-5)}}$$
+
+</br>
+
+<iframe src="http://simulx.webpopix.org:8080/StatisticalModel/error6" style="border: none; width: 800px; height: 400px"; scrolling=no></iframe>

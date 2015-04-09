@@ -1,0 +1,41 @@
+---
+title: "Modelling the distribution process"
+author: "Marc Lavielle </br> January 3, 2015 </br> &nbsp; <hr>"
+
+output: 
+  html_document:
+    toc: true
+---
+---
+<link href="../markdown3.css" rel="stylesheet"></link>  
+
+</br>
+
+
+### Two compartments model
+\[
+\begin{aligned}
+A_c(0) &= D \\\
+A_p(0) &= 0 \\\
+\dot{A_c}(t) &= -k_{12}A_c(t) + k_{21}A_p(t)  \\\
+\dot{A_p}(t) &= k_{12}A_c(t) - k_{21}A_p(t)  
+\end{aligned}
+\]
+
+<iframe src="http://simulx.webpopix.org:8080/PKintro/distribution2" style="border: none; width: 800px; height: 300px"; scrolling=no></iframe>
+
+### Three compartments model
+\[
+\begin{aligned}
+A_c(0) &= D \\\
+A_p(0) &= 0 \\\
+A_q(0) &= 0 \\\
+\dot{A_c}(t) &= -k_{12}A_c(t) + k_{21}A_p(t) -k_{13}A_c(t) + k_{31}A_q(t)  \\\
+\dot{A_p}(t) &= k_{12}A_c(t) - k_{21}A_p(t)  \\\  
+\dot{A_q}(t) &= k_{13}A_c(t) - k_{31}A_q(t)  
+\end{aligned}
+\]
+
+<iframe src="http://simulx.webpopix.org:8080/PKintro/distribution3" style="border: none; width: 800px; height: 300px" ; scrolling=no></iframe>
+
+

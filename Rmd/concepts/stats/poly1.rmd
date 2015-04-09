@@ -1,0 +1,541 @@
+---
+title: "Individual fitting"
+author: "Marc Lavielle </br> March 30, 2015 </br> &nbsp; <hr>"
+
+output: 
+  html_document:
+    toc: true
+---
+---
+<link href="../markdown3.css" rel="stylesheet"></link>  
+
+<script language="javascript"> 
+function toggle1() {
+  var ele = document.getElementById("toggleText1");
+  var text = document.getElementById("displayText1");
+  if(ele.style.display == "block") {
+      	ele.style.display = "none";
+		text.innerHTML = "  Show more details";
+  	}
+	else {
+		ele.style.display = "block";
+		text.innerHTML = "  Hide";
+	}
+} 
+function toggle2() {
+  var ele = document.getElementById("toggleText2");
+  var text = document.getElementById("displayText2");
+  if(ele.style.display == "block") {
+        ele.style.display = "none";
+		text.innerHTML = "  Show more details";
+  	}
+	else {
+		ele.style.display = "block";
+		text.innerHTML = "  Hide";
+	}
+} 
+function toggle3() {
+  var ele = document.getElementById("toggleText3");
+  var text = document.getElementById("displayText3");
+  if(ele.style.display == "block") {
+        ele.style.display = "none";
+		text.innerHTML = "  Show more details";
+  	}
+	else {
+		ele.style.display = "block";
+		text.innerHTML = "  Hide";
+	}
+} 
+</script>
+
+
+```{r,  include=FALSE, cache=FALSE}
+source("myInit.R")
+library("sjPlot")
+```
+
+$$
+\def\ypred{\tilde{y}}
+\newcommand{\argmin}[1]{ \operatorname*{arg\,min}_{#1} }
+\newcommand{\argmax}[1]{ \operatorname*{arg\,max}_{#1} }
+\newcommand{\pmacro}{\texttt{p}}
+\def\like{{\cal L}}
+\def\llike{{\cal LL}}
+\newcommand{\Rset}{\mbox{$\mathbb{R}$}}
+\def\iid{\mathop{\sim}_{\rm iid}}
+$$
+
+</br>
+
+# Introduction
+
+We measure the size of a tumor on a single mice during a experiment. The tumor size, expressed in $\text{cm}^2$, is measured during 20 days:
+
+</br>
+
+<div align="left">
+
+<table width="200">
+<tr>
+<th>time</th>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+<td>4</td>
+<td>5</td>
+<td>6</td>
+<td>7</td>
+<td>8</td>
+<td>9</td>
+<td>10</td>
+</tr>
+<tr>
+<th>y</th>
+<td style="border-bottom:1px solid black">0.5</td>
+<td style="border-bottom:1px solid black">2.0</td>
+<td style="border-bottom:1px solid black">3.3</td>
+<td style="border-bottom:1px solid black">3.8</td>
+<td style="border-bottom:1px solid black">4.8</td>
+<td style="border-bottom:1px solid black">5.3</td>
+<td style="border-bottom:1px solid black">5.7</td>
+<td style="border-bottom:1px solid black">6.8</td>
+<td style="border-bottom:1px solid black">6.1</td>
+<td style="border-bottom:1px solid black">8.6</td>
+</tr>
+<tr>
+<th>time</th>
+<td>11</td>
+<td>12</td>
+<td>13</td>
+<td>14</td>
+<td>15</td>
+<td>16</td>
+<td>17</td>
+<td>18</td>
+<td>19</td>
+<td>20</td>
+</tr>
+<tr>
+<th>y</th>
+<td>8.1</td>
+<td>10.0</td>
+<td>11.6</td>
+<td>10.1</td>
+<td>11.5</td>
+<td>10.1</td>
+<td>11.9</td>
+<td>9.1</td>
+<td>13.6</td>
+<td>12.9</td>
+</tr>
+</table>
+
+</div>
+
+</br>
+
+We can then plot this data as shown in the figure below 
+
+
+```{r, fig.width=7, fig.height=3, echo=FALSE}
+  d <- read.csv(file="polydata1.txt", header=TRUE, sep="\t", quote="\"")
+  ggplotmlx(data=d) +  geom_point(aes(x=time, y=y), color="#6666CC", size = 3) +
+  xlab("time (day)") + ylab(expression("tumor size (cm"^2*")"))
+```
+
+</br>
+
+We may want to perform several tasks using this data:
+
+**1) Model building:** we aim to find a mathematical model to describe what we see in
+the plot. The model mainly consists of two component:
+
+* *The structural model* that describes the general trend for the data,
+
+* *The statistical model* that will describe how the observed data are distributed around the values predicted by the structural model.
+
+
+**2) Model selection:** there is usually not only one model that seems to fit correctly the data. We will therefore need some criteria for *model selection*.
+
+
+**3) Prediction intervals and confidence intervals:** once the model is built and selected, we may want use it for predicting new values of the tumor size at different time points. For that, we will need to take into account the fact that the structural model is not not perfectly known.
+
+</br>
+
+# Model building
+
+## The structural model
+
+
+### A visual approach for model fitting
+
+We consider, as a first approximation, that the general trend for the tumor size is to increase with a constant rate over time. We are therefore assuming a linear trend which is mathematically represented by a polynomial of degree 1:
+
+$$f(t) = c_0 + c_1t$$
+
+Defining the structural model reduces here in choosing the *intercept* $c_0$ and the *slope* $c_1$.
+
+We can try to do that by playing with the values of these parameters and looking how the  tumor size predicted by the model (the red line in the applet below) describes the general trend observed in the data.
+
+<iframe src="http://simulx.webpopix.org:8080/ParameterEstimation/poly/fit_poly1/" style="border: none; width: 1000px; height: 300px"; scrolling=yes></iframe>
+
+A ``nice fit'' between the model and the data is obtained, for instance, with $c_0=1$ and $c_1=0.6$. 
+Other sets of parameter values, such as (2.5, 0.5) or (0.5, 0.7) for example, seem to produce nice fits as well. 
+
+</br>
+
+### The prediction errors
+
+We are using until now a purely visual criterion to evaluate the *goodness of fit* of the proposed model: we want the predicted values to be ``as close as possible'' to the observed values. It is then easy to derive a quantitative criterion from this qualitative criterion: we can introduce the *errors of prediction* which measure the differences between predicted and observed values.
+
+We can then  display these prediction errors (as vertical segments) and try to make them as small as possible. 
+
+<br/>
+
+ 
+<a id="displayText2" href="javascript:toggle1();">**Show more details**</a>
+
+<div id="toggleText1" style="display: none; background-color: #F2F2F2;">
+
+<br/>
+
+Let $n$ be the number of observation and $(y_1, y_2$, \ldots $y_n$) the $n$ observed tumor sizes measured at times $(t_1$, $t_2$, \ldots, $t_n$).
+
+For a given set of parameters $(c_0,c_1)$, the tumor size predicted by the model at time $t_j$ is
+
+$$
+\begin{aligned}
+\ypred_j & = f(t_j ; c_0,c_1) \\
+&= c_0 + c_1 t_j
+\end{aligned}
+$$
+
+The  prediction error $e_j$ is defined as
+$$e_j = y_j - \ypred_j $$
+
+The residual sum of squares (RSS) is the sum of squares of residuals. It is also known as the sum of squared errors of prediction (SSE):
+
+$$
+\begin{aligned}
+\text{SSE} &= \sum_{i=1}^n e_j^2 \\
+&= \sum_{i=1}^n (y_j - \ypred_j)^2
+\end{aligned}
+$$
+
+
+A method for choosing automatically the "best parameters" $(\hat{c}_0,\hat{c}_1)$ consists in minimizing the sum of squared errors of prediction: 
+
+For any $(c_0,c_1)$,
+$$\sum_{i=1}^n (y_j - f(t_j,c_0,c_1))^2  \geq 
+\sum_{i=1}^n (y_j - f(t_j,\hat{c}_0,\hat{c}_1))^2 $$
+
+Or, equivalently,
+$$
+(\hat{c}_0,\hat{c}_1) = \argmin{(c_0,c_1)} \sum_{i=1}^n (y_j - f(t_j,c_0,c_1))^2
+$$
+
+</div>
+
+This method is known as the Least Square Method. 
+
+<br/>
+
+
+<iframe src="http://simulx.webpopix.org:8080/ParameterEstimation/poly/fit_poly2/" style="border: none; width: 1000px; height: 300px"; scrolling=yes></iframe>
+
+</br>
+
+### Comparing several structural models
+
+Instead of a linear trend, we can consider a polynomial trend:
+the structural model is a polynomial of degree $d$, where $d\geq0$: 
+$$
+f(t) = c_0 +c_1t + c_2 t^2 + \ldots + c_d t^d
+$$
+The number of parameters of this structural model is $d+1$.
+
+Two important properties related to the choice of the structural model should be highlighted: 
+
+* The quality of the fit improves with the degree of the polynomial. In other words, the sum of squared prediction errors decreases with the number of parameters of the model. It is even possible to find a polynomial of degree $d=n-1$ that goes through the $n$ observed data points, i.e. such that SSE=0. 
+
+* Improving the goodness of fit by increasing the dimension of the model is not necessarily a good property for prediction. 
+See what happens if we use the ajusted model for predicting the size of the tumor after t=20 days: prediction becomes totally erratic for large $d$. It strongly increases with $d=6$, but decreases with $d=7$ for instance. We cannot trust in any of these predictions. 
+
+<iframe src="http://simulx.webpopix.org:8080/ParameterEstimation/poly/fit_poly3/" style="border: none; width: 1000px; height: 500px"; scrolling=yes></iframe>
+
+</br>
+
+### Assessing the performance of a prediction model
+
+A model which has good prediction properties should be able to predict correctly tumor sizes after the last observation, i.e. after 20 days.
+
+We cannot assess the predictive performance of our model since we don't have any data after 20 days. Nevertheless, this performance can be assessed by splitting the data into 2 subsets: 
+
+* a training set which is used for fitting the model,
+
+* a validation set which is used to evaluate the predictive properties of the model.
+
+In our example, the validation set contains the first two observations (days 1 and 2) and the two last ones (days 19 and 20).
+
+What is expected can be clearly seen with this example:
+
+* The SSE computed on the training set decreases with the number of parameters of the model
+* The SSE computed on the validation set first decreases until $d=2$, but then increases: the model is not able anymore to properly predict the tumor sizes at these time points for larger $d$.
+
+Thus, this criteria would lead us to select $d=2$.
+
+Such method for model selection is known as 
+<a heref="http://en.wikipedia.org/wiki/Cross-validation_(statistics)", target="_blank">*cross validation*</a>.
+ 
+
+<iframe src="http://simulx.webpopix.org:8080/ParameterEstimation/poly/fit_poly4/" style="border: none; width: 1000px; height: 500px"; scrolling=yes></iframe>
+
+</br>
+
+</br>
+
+## The statistical model
+
+### Likelihood and information criteria
+
+We have only considered until now how the general trend behaves like but we sayed very few  about the observations themselves.
+We just ask them to be *distributed* around the structural model $f$.
+
+In a probabilistic framework, we consider the observations as the realizations of *random variables*.  The statistical model will then describe how the observations are *randomly distributed* around their predictions.
+
+Once the model is defined as a statistical model, we can define the likelihood function and several information criteria such as
+the Akaike information criterion (AIC) and Bayesian information criterion
+(BIC) useful for model selection.
+
+<br/>
+
+<a id="displayText2" href="javascript:toggle2();">**Show more details**</a>
+
+<div id="toggleText2" style="display: none; background-color: #F2F2F2;">
+
+Let $y=(y_1,y2,\ldots,y_n)$ be the vector of observations and let $\pmacro$ be  the probability distribution of $y$. We assume that this distribution is a *parametric* distribution that depends on a vector of parameters $\psi$:
+
+$$ y \sim \pmacro(\, \cdot \, ; \psi)$$
+
+Here, $\pmacro$ denotes both the probability distribution and the probability density function (pdf) of $y$. Then, $\pmacro(y ; \psi)$ is the pdf evaluated at $y$. 
+
+For a given statistical model and a given vector of observations $y$, the likelihood $\like$ and the log-likelihood $\llike$ are functions of the parameter $\psi$ defined as follows:
+
+$$ 
+\begin{aligned}
+\like_y(\psi) &= \pmacro(y ; \psi) \\
+\llike_y(\psi) &= \log(\pmacro(y ; \psi))
+\end{aligned}
+$$
+
+Assume that $\psi$ takes its values in a subset $\Psi$ of $\Rset^P$. Then, the *Maximum Likelihood* (ML) estimator of $\psi$ is a function of $y$ that maximizes the likelihood function:
+
+$$ 
+\begin{aligned}
+\hat{\psi} & = \argmax{\psi \in \Psi}\like_y(\psi) \\
+& = \argmax{\psi \in \Psi}\llike_y(\psi)
+\end{aligned}
+$$
+
+AIC and BIC are *penalized* versions of the log-likelihood defined by:
+
+$$
+\begin{aligned}
+AIC &= -2\llike_y(\hat{\psi}) + 2P \\
+BIC &= -2\llike_y(\hat{\psi}) + \log(n)P 
+\end{aligned}
+$$
+
+The *deviance* defined as $-2\llike_y(\hat{\psi})$ decreases when $P$ increases. The penalization term ($2P$ or $\log(n)P$) increases with $P$. 
+The objective of these criteria is to propose a model with an optimal compromise between the goodness of fit (measured by the deviance) and the complexity of  the model (measured by the number of parameters $P$).
+
+</div>
+
+</br>
+
+**Example**: A widely used bell-shaped distribution for modeling continuous data is the normal distribution. 
+
+Assume, for instance, that the residual errors are normally distributed with a constant variance. This hypothesis defines a statistical model such that the likelihood function, AIC and BIC can be computed.
+
+</br>
+
+<a id="displayText2" href="javascript:toggle3();">**Show more details**</a>
+
+<div id="toggleText3" style="display: none; background-color: #F2F2F2;">
+
+We assume that the residual errors are independent and identically distributed (i.i.d.), with a normal distribution, with mean 0 and variance $a^2$:
+
+$$ e_j \iid {\cal N}(0,a^2)$$
+
+Since
+$$ y_j = f(t_j , \phi) + e_j$$
+this assumption about the residual errors is equivalent to assume that the observed tumor sizes are also independent and normally distributed around their predictions, with  constant variance $a^2$:
+
+$$ y_j \sim {\cal N}(f(t_j, \phi),a^2)$$
+
+The distribution of $y$ is a  distribution that depends on a  vector of parameters 
+$$\psi = (\phi , a^2) $$
+The pdf of $y=(y_1,\ldots,y_n)$ is the pdf of a Gaussian vector:
+
+$$\begin{aligned}
+\pmacro(y ; \psi) &= \prod_{j=1}^n \pmacro(y_j; \psi) \\
+&= \prod_{j=1}^n \frac{1}{\sqrt{2\pi a^2}} \text{exp}\left(-\frac{1}{2a^2}(y_j - f(t_j, \phi))^2 \right) \\
+&=  \frac{1}{(2\pi a^2)^{n/2}} \text{exp}\left(-\frac{1}{2a^2}\sum_{j=1}^n(y_j - f(t_j, \phi))^2\right).
+\end{aligned}$$
+
+The deviance is therefore
+$$
+-2\llike_y(\psi) = n\log(2\pi) + n\log(a^2) + \frac{1}{a^2}\sum_{j=1}^n(y_j - f(t_j,\phi))^2
+$$
+
+Minimization of the deviance can be performed in two steps:
+
+* $\phi$, the parameters of the structural model are estimated by minimizing the residual sum of squares:
+$$\begin{aligned}
+\hat{\phi} &= \argmin{\phi \in \Phi} \left\{
+n\log(2\pi) + n\log(a^2) + \frac{1}{a^2}\sum_{j=1}^n(y_j - f(t_j,\phi))^2
+\right\} \\
+&= \argmin{\phi \in \Phi}\sum_{j=1}^n(y_j - f(t_j,\phi))^2
+\end{aligned}$$
+
+We see that, for this residual error model, the Maximum Likelihood estimator $\hat{\phi}$ is also the Least-Squares estimator of $\phi$. 
+
+* $a^2$, the variance of the residual errors is estimated in a second step: 
+$$\begin{aligned}
+\hat{a}^2 &= \argmin{a^2 \in \Rset^+} \left\{
+n\log(2\pi) + n\log(a^2) + \frac{1}{a^2}\sum_{j=1}^n(y_j - f(t_j,\hat{\phi}))^2
+\right\} \\
+&= \frac{1}{n}\sum_{j=1}^n(y_j - f(t_j,\hat{\phi}))^2
+\end{aligned}$$
+
+Finally, the deviance computed with $\psi=\hat{\psi}=(\hat{\phi},\hat{a}^2)$ reduces to
+$$
+-2\llike_y(\hat{\psi}) = n(\log(2\pi) -\log(n) + 1) + n\log(\sum_{j=1}^n(y_j - f(t_j,\hat{\phi}))^2) 
+$$
+
+</div>
+
+</br>
+
+For a given structural model, i.e. for a given  polynomial degree, the application below displays:
+
+* $n$, the number of observations,
+* $d$ the degree of the polynomial,
+* $P$ the total number of parameters of the model (here, $P=d+2$),
+* $SSE$ the sum of squared errors of prediction,
+* $-2 \llike$ the deviance,
+* $AIC$ the Akaike criterion,
+* $BIC$ the Bayesian information criterion
+
+Select the panel `Criteria` to display the deviance, AIC and BIC for different polynomial degrees $d$. 
+
+<iframe src="http://simulx.webpopix.org:8080/ParameterEstimation/poly/fit_poly5/" style="border: none; width: 1000px; height: 500px"; scrolling=yes></iframe>
+
+As expected, the deviance decreases with $d$,  while AIC and BIC decrease for $d\leq 2$ and increase for $d\geq 2$.
+These two criteria reach their minimum for $d=2$: the model selected both by AIC and BIC is therefore a polynomial of degree 2. 
+
+</br>
+
+### Assessing the residual error model
+
+We have assumed that the variance of the residual error is constant over time: 
+$$y_j = f(t_j,\phi) + a \varepsilon_j$$
+where $\varepsilon_j \iid {\cal N}(0,1)$.
+
+This is a very strong assumption that needs to be validated.
+
+We will only consider here the ``best'' structural model selected previously, i.e. a polynomial of degree 2. 
+Once the parameters of the model have been estimated, we can define a prediction of the standardized residual error $\varepsilon_j$ as
+
+$$\tilde{\varepsilon}_j = \frac{y_j = f(t_j,\hat{\phi})}{\hat{a}}$$
+
+If the model is correct,  sequence $(\tilde{\varepsilon}_j)$ should behave as a sequence of independent normal random variables with mean 0 and variance 1.
+
+* If we display this sequence versus time ($t_j$ is used on the $x$-axis), we don't see any trend: it seems to be randomly distributed around 0, which means that the structural model properly described the general trend of the observed data.  
+
+* If we now display this sequence versus the predictions ($\tilde{y}_j=f(t_j,\hat{\phi})$ on the $x$-axis), their magnitude seems to increase with the prediction. This behavior is in  disagreement with our hypothesis of residual errors identically distributed over time. 
+
+* The plot of  observations versus predictions: the points seems to be randomly distributed around the line $y=\tilde{y}$ without any trend, which confirms that a polynomial of degree 2 can be used as structural model, but the differences between predictions and observations increase in magnitude with the prediction value.  
+
+<iframe src="http://simulx.webpopix.org:8080/ParameterEstimation/poly/fit_poly6a/" style="border: none; width: 1000px; height: 480px"; scrolling=yes></iframe>
+
+These different goodness of fit plots suggest that the constant error model should be rejected. 
+
+</br>
+
+### Comparing different residual error models
+
+Other residual error models should therefore be considered. For instance,
+
+* the proportional error model, assumes that the magnitude of the residual error at a given time is proportional to the predicted tumor size at this time,
+$$y_j = f(t_j,\phi) + b f(t , \phi)\varepsilon_j$$
+
+* the combined error model  combines a constant component and a proportional component:
+
+$$y_j = f(t_j,\phi) + (a + b f(t , \phi))\varepsilon_j$$
+
+The constant error model and the proportional error models are particular cases of this combined error model. They are obtained, respectively, with $b=0$ and $a=0$.
+
+</br>
+
+<a href="http://model.webpopix.org/model/individual/residualError.html" target="_blank">**More details about the residual error model**</a> 
+
+</br>
+
+The goodness of fit plots obtained with these two residual error models are now pretty nice. There is no reason, according to these plots, to reject any of these two alternative models.
+
+Choice between a proportional error model and a combined one now becomes a problem of model selection. We can therefore use some information criteria for that. 
+
+Here, both AIC and BIC select the proportional error model: the constant component is not large enough to significantly improve the quality of the fit obtained with a pure proportional error model.
+
+<iframe src="http://simulx.webpopix.org:8080/ParameterEstimation/poly/fit_poly6b/" style="border: none; width: 1000px; height: 500px"; scrolling=yes></iframe>
+
+**Remark:** the constant error model is rejected, not because AIC and BIC obtained with this model are the largest ones, but because it is considered as misspecified: what we observe is in disagreement with what is expected with this model.
+
+
+</br>
+
+### Transforming the data
+
+Assuming that the observed data is normally distributed is very convenient in practice but it is a strong assumption.  
+
+We could, for instance, assume that it is the log-tumor size, and not the tumor size itself which is normally distributed. 
+
+Using a log-normal distribution, instead of a normal distribution, could be justified by the fact that a tumor size only takes positive values. Such constaint is not ensured with a normal distribution.  
+
+<a href="http://model.webpopix.org/model/individual/residualError.html#transforming-the-data" target="_blank">More details about data transformation</a> 
+
+<iframe src="http://simulx.webpopix.org:8080/ParameterEstimation/poly/fit_poly7/" style="border: none; width: 1000px; height: 530px"; scrolling=yes></iframe>
+
+Results obtained with a proportional error model on the original data, or with a constant error model on the log-data are very similar in our example: the likelihood and the information criteria are almost identical.
+
+Then, choosing one model or the other one is rather arbitrary: these two models fit equivalently well the data and can be reasonably selected
+
+</br>
+
+## Summary
+
+Fitting a model for longitudinal data requires
+
+* to select a structural model
+* to decide if the data needs to be transformed
+* to select a residual error model
+
+We have considered until now each component of the model separately, building the model step by step.
+
+A polynomial of degree 2 associated with a proportional error model seems to fit our data quite well, but can we conclude that this model is the "best" model for this data, among all possible combinations of structural and statistical models?
+
+Indeed, several models have not been considered adopting this strategy for model building. 
+We have been using a least-square criterion (i.e. a constant error model) for selecting a polynomial of degree 2, but which structural model would we select transforming the data, or with another error model? 
+
+It does not make sense, of course, to compare all possible combinations (we can definitively reject a polynomial of degree 10!), but we could try, for instance, to use a polynomial of degree 1 or 3 to fit the log-tumor size, or to combine it with a combined error model.  
+
+<iframe src="http://simulx.webpopix.org:8080/ParameterEstimation/poly/fit_poly8/" style="border: none; width: 1000px; height: 620px"; scrolling=yes></iframe>
+
+</br>
+
+</br>
+
+# Prediction intervals and confidence intervals
+
+to do

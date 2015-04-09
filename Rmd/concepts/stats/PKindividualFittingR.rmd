@@ -1,0 +1,370 @@
+---
+title: "Modelling longitudinal data: the individual approach"
+author: "Marc Lavielle </br> January 27, 2014 </br> &nbsp; <hr>"
+
+output: 
+  html_document:
+    toc: true
+---
+---
+<link href="../markdown3.css" rel="stylesheet"></link>  
+
+
+### Introduction
+We will illustrate this modeling process using a pharmacokinetics (PK) example.
+The point of this example is to show how several of the tasks described earlier can be easily implemented using the
+statistical software \R. Some knowledge of statistics and \R is necessary for following the various modeling steps and implementing the methods.
+
+### The data
+Let us consider a dose D = 50mg of a drug administered orally to a patient at time $t=0$. The concentration of the drug in the bloodstream $(y_j, 1\leq j \leq 12)$ is then measured at times $(t_j, 1\leq j \leq 12)$:
+
+
+ First, we import the data stored in the data file `individualFitting_data.txt` and plot it to have an initial look:
+
+```{r , fig.width=5}
+pk1=read.table("individualFitting_data.txt",header=T)
+pk1
+
+t=pk1$time
+y=pk1$concentration
+n=length(t)
+plot(t,y,xlab="time (hours)",ylab="concentration (mg/l)")
+abline(a=0,b=0,lty=3,col="grey")
+```
+
+### Fitting two PK models
+$$
+\def\ka{k_a}
+\def\kel{k}
+\def\teps{\varepsilon}
+$$
+
+We are going to consider two possible structural models that may describe
+the observed time-course of the concentration:
+
+* A one-compartment model with first-order absorption and first-order elimination:
+$$
+\begin{aligned}
+\phi_1 &= (\ka, V, \kel) \\
+f_1(t ; \phi_1) &= \frac{D\, \ka}{V(\ka-\kel)} \left( e^{-\kel \, t} - e^{-\ka \, t} \right).
+\end{aligned}
+$$
+```{r}
+predc1=function(t,x){
+   f=50*x[1]/x[2]/(x[1]-x[3])*(exp(-x[3]*t)-exp(-x[1]*t)) 
+return(f)}
+```
+
+* A one-compartment model with zero-order absorption and first-order elimination:
+$$
+\begin{aligned}
+\phi_2 &= (T_{k0}, V, \kel) \\
+f_2(t ; \phi_2) &= \left\{  \begin{array}{ll}
+                         \frac{D}{V \,T_{k0} \, \kel} \left( 1- e^{-\kel \, t} \right) & {\rm if }\ t\leq T_{k0} \\[0.3cm]
+                         \frac{D}{V \,T_{k0} \, \kel} \left( 1- e^{-\kel \, T_{k0}} \right)e^{-\kel \, (t- T_{k0})} & {\rm otherwise} .
+                       \end{array}
+\right.
+\end{aligned}
+$$
+```{r}
+predc2=function(t,x){ 
+   f=50/x[1]/x[2]/x[3]*(1-exp(-x[3]*t))
+   f[t>x[1]]=50/x[1]/x[2]/x[3]*(1-exp(-x[3]*x[1]))*
+     exp(-x[3]*(t[t>x[1]]-x[1]))
+return(f)}
+```
+We then define two models ${\cal M}_1$ and ${\cal M}_2$ that assume (for now)  constant residual error models:
+$$
+\begin{aligned}
+{\cal M}_1  : \quad y_j & =  f_1(t_j ; \phi_1) + a_1\teps_j \\
+{\cal M}_2  : \quad y_j & =  f_2(t_j ; \phi_2) + a_2\teps_j .
+\end{aligned}
+$$
+
+We can fit these two models to our data by computing the maximum likelihood estimate (MLE) $\hat{\psi}_1=(\hat{\phi}_1,\hat{a}_1)$ and $\hat{\psi}_2=(\hat{\phi}_2,\hat{a}_2)$ of $\psi$  under each model. We can use the `nlm` function for nonlinear minimization. This function requires an initial value $\psi_0 = (\phi_0, a_0)$:
+
+```{r}
+fmin1=function(x,y,t){
+   f=predc1(t,x)
+   g=x[4]
+   e=sum( ((y-f)/g)^2 + log(g^2))
+return(e)}
+
+fmin2=function(x,y,t){
+   f=predc2(t,x)
+   g=x[4]
+   e=sum( ((y-f)/g)^2 + log(g^2))
+return(e)}
+
+options(warn=-1)
+pk.nlm1=nlm(fmin1, c(0.3,6,0.2,1), y, t, hessian="true")
+psi1=pk.nlm1$estimate
+pk.nlm2=nlm(fmin2, c(3,10,0.2,4), y, t, hessian="true")
+psi2=pk.nlm2$estimate
+
+cat(" psi1 =",psi1,"\n","psi2 =",psi2)
+```
+### Evaluating and selecting PK models
+The estimated parameters $\hat{\phi}_1$ and $\hat{\phi}_2$ can then be used for computing the predicted concentrations $\hat{f}_1(t)$ and $\hat{f}_2(t)$ under both models at any time $t$. These curves can  be plotted over the original data and compared:
+
+
+```{r}
+tc=seq(from=0,to=25,by=0.1)
+phi1=psi1[c(1,2,3)]
+fc1=predc1(tc,psi1)
+phi2=psi2[c(1,2,3)]
+fc2=predc2(tc,psi2)
+
+plot(t,y,ylim=c(0,4.1),xlab="time (hours)",ylab="concentration (mg/l)")
+lines(tc,fc1, type = "l", col = "black", lwd=1, lty=1)
+lines(tc,fc2, type = "l", col = "black", lwd=1, lty=4)
+abline(a=0,b=0,lty=3,col="grey")
+legend(13,4,
+       c("observations","first-order absorption","zero-order absorption"), 
+       lty=c(-1,1,4), pch=c(1,-1,-1), lwd=1) 
+```
+
+We clearly see that a much better fit is obtained with model ${\cal M}_2$, i.e.,  assuming a zero-order absorption process.
+
+Another useful goodness-of-fit plot can be obtained by plotting the observations $(y_j)$ versus the predictions $\hat{y}_j=f(t_j ; \hat{\psi})$ given by the models:
+
+```{r}
+f1=predc1(t,phi1)
+f2=predc2(t,phi2)
+
+par(mfrow= c(1,2))
+plot(f1,y,xlim=c(0,4),ylim=c(0,4), main="model 1")
+abline(a=0,b=1,lty=1)
+plot(f2,y,xlim=c(0,4),ylim=c(0,4), main="model 2")
+abline(a=0,b=1,lty=1)
+```
+
+### Model selection
+According to the previous diagnostic plots, ${\cal M}_2$ would seem to have a slight edge.
+This can be tested more analytically using the BIC:
+
+```{r}
+deviance1=pk.nlm1$minimum + n*log(2*pi)
+bic1=deviance1+log(n)*length(psi1)
+deviance2=pk.nlm2$minimum + n*log(2*pi)
+bic2=deviance2+log(n)*length(psi2)
+cat(" bic1 =",bic1,"\n","bic2 =",bic2)
+```
+
+A smaller BIC is better. Therefore, this result also suggests that model ${\cal M}_2$ should be selected.
+
+### Fitting different error models
+For the moment, we have only considered  constant error models. However, the *observations vs predictions* plot  hints that the amplitude of the residual errors may increase with the size of the predicted value. Let us therefore take a closer look at four different residual error models, each of which we will associate with the *best* structural model $f_2$:
+
+${\cal M}_2$  constant error model:  $y_j=f_2(t_j;\phi_2)+a_2\teps_j$
+
+${\cal M}_3$  proportional error model:  $y_j=f_2(t_j;\phi_3)+b_3f_2(t_j;\phi_3)\teps_j$
+
+${\cal M}_4$ combined error model:  $y_j=f_2(t_j;\phi_4)+(a_4+b_4f_2(t_j;\phi_4))\teps_j$ 
+
+${\cal M}_5$  exponential error model: $\log(y_j)=\log(f_2(t_j;\phi_5)) + a_5\teps_j$.
+
+
+The three new ones need to be entered into R:
+
+```{r}
+fmin3=function(x,y,t){
+   f=predc2(t,x)
+   g=x[4]*f
+   e=sum( ((y-f)/g)^2 + log(g^2))
+return(e)}
+
+fmin4=function(x,y,t){
+   f=predc2(t,x)
+   g=abs(x[4])+abs(x[5])*f
+   e=sum( ((y-f)/g)^2 + log(g^2))
+return(e)}
+
+fmin5=function(x,y,t){
+   f=predc2(t,x)
+   g=x[4]
+   e=sum( ((log(y)-log(f))/g)^2 + log(g^2))
+return(e)}
+```
+
+We can now compute the MLEs $\hat{\psi}_3=(\hat{\phi}_3,\hat{b}_3)$, $\hat{\psi}_4=(\hat{\phi}_4,\hat{a}_4,\hat{b}_4)$ and $\hat{\psi}_5=(\hat{\phi}_5,\hat{a}_5)$ of $\psi$  under models ${\cal M}_3$, ${\cal M}_4$  and ${\cal M}_5$:
+
+
+```{r}
+pk.nlm3=nlm(fmin3, c(phi2,0.1), y, t, hessian="true")
+psi3=pk.nlm3$estimate
+
+pk.nlm4=nlm(fmin4, c(phi2,1,0.1), y, t, hessian="true")
+psi4=pk.nlm4$estimate
+psi4[c(4,5)]=abs(psi4[c(4,5)])
+ 
+pk.nlm5=nlm(fmin5, c(phi2,0.1), y, t, hessian="true")
+psi5=pk.nlm5$estimate
+
+cat(" psi3 =",psi3,"\n","psi4 =",psi4,"\n","psi5 =",psi5)
+```
+
+
+### Selecting the error model
+As before, these curves can be plotted over the original data and compared:
+
+```{r}
+phi3=psi3[c(1,2,3)]
+fc3=predc2(tc,phi3)
+phi4=psi4[c(1,2,3)]
+fc4=predc2(tc,phi4)
+phi5=psi5[c(1,2,3)]
+fc5=predc2(tc,phi5)
+
+par(mfrow= c(1,1))
+plot(t,y,ylim=c(0,4.1),xlab="time (hours)",ylab="concentration (mg/l)")
+lines(tc,fc2, type = "l", lwd=1)
+lines(tc,fc3, type = "l", lwd=1, lty=3)
+lines(tc,fc4, type = "l", lwd=1, lty=4)
+lines(tc,fc5, type = "l", lwd=1, lty=2)
+abline(a=0,b=0,lty=3,col="grey")
+legend(13,4,c("observations","constant error model",
+      "proportional error model", "combined error model",
+      "exponential error model"), lty=c(-1,1,3,4,2), pch=c(1,-1,-1,-1,-1)) 
+
+f2=predc2(t,phi2)
+f3=predc2(t,phi3)
+f4=predc2(t,phi4)
+f5=predc2(t,phi5)
+
+par(mfrow= c(2,2))
+plot(f2,y,xlim=c(0,4),ylim=c(0,4), main="model 2")
+abline(a=0,b=1,lty=1)
+plot(f3,y,xlim=c(0,4),ylim=c(0,4), main="model 3")
+abline(a=0,b=1,lty=1)
+plot(f4,y,xlim=c(0,4),ylim=c(0,4), main="model 4")
+abline(a=0,b=1,lty=1)
+plot(f5,y,xlim=c(0,4),ylim=c(0,4), main="model 5")
+abline(a=0,b=1,lty=1)
+```
+
+The  predicted concentrations obtained with models ${\cal M}_3$, ${\cal M}_4$  and ${\cal M}_5$ are quite similar.
+We now calculate the BIC for each:
+
+
+```{r}
+deviance3=pk.nlm3$minimum + n*log(2*pi)
+bic3=deviance3 + log(n)*length(psi3)
+deviance4=pk.nlm4$minimum + n*log(2*pi)
+bic4=deviance4 + log(n)*length(psi4)
+deviance5=pk.nlm5$minimum + 2*sum(log(y)) + n*log(2*pi)
+bic5=deviance5 + log(n)*length(psi5)
+
+cat(" bic3 =",bic3,"\n","bic4 =",bic4,"\n","bic5 =",bic5)
+```
+
+All of these BIC are lower than the constant residual error one.
+
+There is not however a large difference between them, though the proportional and combined error models give the smallest and essentially identical BIC.  We will use the combined error model ${\cal M}_4$ in the following (the same types of analyses could be done with the proportional error model).
+
+A 90\% confidence interval for $\psi_4$ can derived from the Hessian (i.e., the square matrix of second-order partial derivatives)  of the objective function (i.e., -2 $\times \ LL$):
+
+```{r}
+alpha=0.9
+df=n-length(phi4)
+I4=pk.nlm4$hessian/2
+H4=solve(I4)
+s4=sqrt(diag(H4)*n/df)
+delta4=s4*qt(0.5+alpha/2,df)
+ci4=matrix(c(psi4-delta4,psi4+delta4),ncol=2)
+print(ci4)
+```
+
+We can also calculate a $90\%$ confidence interval for $f_4(t)$ using the central limit theorem:
+
+```{r}
+nlpredci=function(phi,f,H){
+   dphi=length(phi)
+   nf=length(f)
+   H=H*n/(n-dphi)
+   S=H[seq(1,dphi),seq(1,dphi)]
+   G=matrix(nrow=nf,ncol=dphi)
+   for (k in seq(1,dphi)) {
+      dk=phi[k]*(1e-5)
+      phid=phi 
+      phid[k]=phi[k] + dk
+      fd=predc2(tc,phid)
+      G[,k]=(f-fd)/dk 
+   }
+   M=rowSums((G%*%S)*G)
+   deltaf=sqrt(M)*qt(0.5+alpha/2,df)
+return(deltaf)}
+
+deltafc4=nlpredci(phi4,fc4,H4)
+```
+
+This can then be plotted:
+
+```{r}
+par(mfrow= c(1,1))
+plot(t,y,ylim=c(0,4.5),xlab="time (hours)",ylab="concentration (mg/l)")
+lines(tc,fc4, type = "l", lwd=2)
+lines(tc,fc4-deltafc4, type = "l", lwd=1, lty=3)
+lines(tc,fc4+deltafc4, type = "l", lwd=1, lty=3)
+abline(a=0,b=0,lty=3,col="grey")
+legend(10.5,4.5,c("observed concentrations","predicted concentration",
+  "PI for predicted concentration"),lty=c(-1,1,3), pch=c(1,-1,-1), lwd=c(2,2,1)) 
+```
+
+Alternatively, prediction intervals for $\hat{\psi}_4$, $\hat{f}_4(t;\hat{\psi}_4)$ and new observations at any time $t$ can be estimated by Monte Carlo simulation:
+
+```{r}
+f=predc2(t,phi4)
+a4=psi4[4]
+b4=psi4[5]
+g=a4+b4*f
+dpsi=length(psi4)
+nc=length(tc)
+N=500
+qalpha=c(0.5 - alpha/2,0.5 + alpha/2)
+PSI=matrix(nrow=N,ncol=dpsi)
+FC=matrix(nrow=N,ncol=nc)
+Y=matrix(nrow=N,ncol=nc)
+for (k in seq(1,N)) {
+   eps=rnorm(n)
+   ys=f+g*eps
+   pk.nlm=nlm(fmin4, psi4, ys, t)
+   psie=pk.nlm$estimate
+   psie[c(4,5)]=abs(psie[c(4,5)])
+   PSI[k,]=psie
+   fce=predc2(tc,psie[c(1,2,3)])
+   FC[k,]=fce
+   gce=a4+b4*fce
+   Y[k,]=fce + gce*rnorm(1)
+}
+
+mean4s=apply(PSI,2,mean)
+median4s=apply(PSI,2,median)
+sd4s=apply(PSI,2,sd)
+ci4s=matrix(nrow=dpsi,ncol=2)
+for (k in seq(1,dpsi)){
+   ci4s[k,]=quantile(PSI[,k],qalpha,names=FALSE)
+}
+print(matrix(c(mean4s,median4s,sd4s),nrow=dpsi))
+print(ci4s)
+
+cifc4s=matrix(nrow=nc,ncol=2)
+ciy4s=matrix(nrow=nc,ncol=2)
+for (k in seq(1,nc)){
+   cifc4s[k,]=quantile(FC[,k],qalpha,names=FALSE)
+   ciy4s[k,]=quantile(Y[,k],qalpha,names=FALSE)
+}
+
+par(mfrow= c(1,1))
+plot(t,y,ylim=c(0,4.5),xlab="time (hours)",ylab="concentration (mg/l)")
+lines(tc,fc4, type = "l", lwd=2)
+lines(tc,cifc4s[,1], type = "l", lwd=1, lty=3)
+lines(tc,cifc4s[,2], type = "l", lwd=1, lty=3)
+lines(tc,ciy4s[,1], type = "l",  lwd=1, lty=2)
+lines(tc,ciy4s[,2], type = "l",  lwd=1, lty=2)
+abline(a=0,b=0,lty=3,col="grey")
+legend(10.5,4.5,c("observed concentrations","predicted concentration",
+       "PI for predicted concentration","PI for observed concentrations"),
+       lty=c(-1,1,3,2), pch=c(1,-1,-1,-1), lwd=c(2,2,1,1)) 
+```
+
